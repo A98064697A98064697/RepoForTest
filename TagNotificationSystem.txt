@@ -1,0 +1,71 @@
+Design Doc
+https://microsoft.sharepoint.com/:w:/r/teams/DPBI/_layouts/15/Doc.aspx?sourcedoc=%7BB9CF8550-7543-4983-AB08-7D2641F7320A%7D&file=Tag%20Notification%20System.docx&action=default&mobileredirect=true
+
+
+VSDataSvc_Tags/DataHub.Tags.Service/Controllers/EngineController.cs
+
+APIs
+[HttpGet]
+[Route("getenginerules")]
+// Gets the set of available tags in the TaggerEngine XML format
+
+[HttpGet]
+[Route("getenginerulesdiffs")]
+// Get the engine rule diff between CosmosProd and SQLDbProd
+
+[HttpGet]
+[Route("updatenova")]
+// Update the set of available tags in the specified Nova tagger engine instance
+
+[HttpGet]
+[Route("updatecosmos")]
+// Update the cosmos tag rules XML
+
+
+let workloadGDPRData = cluster('ddtelapps').database('DDTelAppsStaging').Fact_WorkloadTags_Daily
+| where Date >= datetime(2018-04-01)
+| where Date <= datetime(2018-04-08)
+| extend WLHierArry = split(WorkloadTagsHierarchy, " , ")
+| mvexpand todynamic(WLHierArry)
+| project WLHierArry, Id
+| summarize GDPRCount = dcount(Id, 3) by tostring(WLHierArry);
+cluster('Vstelapps').database('VSTelemetryApps').Fact_WorkloadTags_Daily
+| where Date >= datetime(2018-04-01)
+| where Date <= datetime(2018-04-08)
+| extend WLHierArry = split(WorkloadTagsHierarchy, " , ")
+| mvexpand todynamic(WLHierArry)
+| project WLHierArry, Id
+| summarize LegacyCount = dcount(Id, 3) by tostring(WLHierArry)
+| join kind=fullouter(workloadGDPRData) on WLHierArry
+| extend DiffPercent = toint(((todouble(GDPRCount) - todouble(LegacyCount))/todouble(GDPRCount)) * 100)
+
+https://devdiv.visualstudio.com/DevDiv/DataSMART-Insight/_git/DSI-Curation/?path=%2FMetrics%2FKustoQueries%2Fvalidation%20and%20experiments%2Fsimplified%2Fsimplified%20-%20workload%20by%20day%20with%20aiprojects%20.csl&version=GBDSI-Curation-Staging
+
+let workloadGDPRData = cluster('ddtelapps').database('DDTelAppsStaging').Fact_WorkloadTags_Daily
+| where Date >= datetime(2018-04-01)
+| where Date <= datetime(2018-04-02)
+| extend WLHierArry = split(WorkloadTagsHierarchy, " , ")
+| mvexpand todynamic(WLHierArry)
+| project WLHierArry, Id
+| summarize GDPRCount = dcount(Id, 3) by tostring(WLHierArry);
+cluster('ddtelapps').database('DDTelApps').Fact_WorkloadTags_Daily
+| where Date >= datetime(2018-04-01)
+| where Date <= datetime(2018-04-02)
+| extend WLHierArry = split(WorkloadTagsHierarchy, " , ")
+| mvexpand todynamic(WLHierArry)
+| project WLHierArry, Id
+| summarize LegacyCount = dcount(Id, 3) by tostring(WLHierArry)
+| join kind=fullouter(workloadGDPRData) on WLHierArry
+| sort by WLHierArry asc
+| extend DiffPercent = toint(((todouble(GDPRCount) - todouble(LegacyCount))/todouble(GDPRCount)) * 100) 
+
+DSI-Curation/EngineeringSystems/WorkflowHealthService/DataHub.VsTelHealth.WorkflowHealth/Impl/WorkflowHealthRepositoryService.cs
+
+
+
+
+SMART Tagging Discussions and Announcements <smarttag@microsoft.com>
+
+
+VisualStudio.InsightsMetrics.DailyMetrics
+Workload.Tagging.v1Staging
